@@ -52,6 +52,8 @@ static int i2c_user_xfer(struct i2c_adapter *adap, struct i2c_msg *msg, int n)
 	ctx->msg = msg;
 	ctx->nmsg = n;
 	ctx->imsg = 0;
+	/* force the STOP in the last msg in this xfer */
+	msg[n-1].flags |= I2C_M_STOP;
 	switch ((prevstate=ctx->state)) {
 		case I2C_W4R:
 			ctx->nmsg = 1;
