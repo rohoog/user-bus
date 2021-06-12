@@ -138,9 +138,7 @@ static ssize_t i2c_user_read(struct file *file, char __user *buf, size_t size, l
 		/* handle write transaction payload */
 		len = ctx->msg[ctx->imsg].len;
 		if (len>size) len=size;
-		if (copy_to_user(buf, ctx->msg[ctx->imsg].buf, len) != len) {
-			return -EFAULT;
-		}
+		len -= copy_to_user(buf, ctx->msg[ctx->imsg].buf, len);
 		ctx->msg[ctx->imsg].len = len;
 		if (++ctx->imsg >= ctx->nmsg) {
 			ctx->state = I2C_RDY;
@@ -178,9 +176,7 @@ static ssize_t i2c_user_read(struct file *file, char __user *buf, size_t size, l
 		i2chdr.len = ctx->msg->len;
 		len = sizeof i2chdr;
 		if (len>size) len=size;
-		if (copy_to_user(buf, &i2chdr, len) != len) {
-			return -EFAULT;
-		}
+		len -= copy_to_user(buf, &i2chdr, len);
 		return len;
 	}
 	return 0;
@@ -201,9 +197,7 @@ static ssize_t i2c_user_write(struct file *file, const char __user *buf, size_t 
 		len = ctx->msg[ctx->imsg].len;
 		if (len>size) len=size;
 		
-		if (copy_from_user(ctx->msg[ctx->imsg].buf, buf, len) != len) {
-			return -EFAULT;
-		}
+		len -= copy_from_user(ctx->msg[ctx->imsg].buf, buf, len);
 		ctx->msg[ctx->imsg].len = len;
 		if (++ctx->imsg >= ctx->nmsg) {
 			ctx->state = I2C_RDY;
@@ -254,8 +248,9 @@ static long i2c_user_xferioctl(struct i2c_user_bus *ctx, struct i2c_umsg __user 
 		wake_up(&ctx->wlist);
 	}
 	len = sizeof *msg;
+	/* copy_to_user returns how many bytes were NOT copied */
 	len -= copy_to_user(msg, ctx->msg+ctx->imsg, len);
-	if (len) return -EFAULT; // need another state, so caller can re-try?
+	if (len != sizeof *msg) return -EFAULT; // need another state, so caller can re-try?
 	return 0;
 }
 
