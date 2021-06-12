@@ -8,16 +8,18 @@ Using the 2 together allows the use of standard i2ctools like i2cdetect to inter
 
 The user-land i2c driver works for i2c busses like pseudo-tty, userfs, loop work for ttys, filesystems and blockdevices.
 
-The protocol is really simple (too simple at the moment).  
-When a userland application opens the /dev/i2c-user device, a new /dev/i2c-x is created. The userland application is supposed to read from the ope
-device filedescriptor and the read returns 2 bytes: the i2c address (shifted <<1 to include the read/write bit) and the length. If the address indicates a read
-transaction (`addr&1 == 1`), the next operation should be a write, returning what was read from the addressed device. If the address indicates a write (`addr&1 == 0`),
+There are 2 options for the protocol, old 'read/write' only protocol and 'ioctl/read/write' protocol.
+
+The old 'read/write' protocol is really simple (too simple for real applications, but in simple cases it might suffice).  
+When a userland application opens the /dev/i2c-user device, a new /dev/i2c-x is created. The userland application is supposed to read from the opened device filedescriptor and the read returns 2 bytes: the i2c address (shifted <<1 to include the read/write bit) and the length.
+If the address indicates a read transaction (`addr&1 == 1`), the next operation should be a write, returning what was read from the addressed device. If the address indicates a write (`addr&1 == 0`),
 the next operation should be a read, reading what data to write to the addressed device. When the bus is not ACK-ed (no device reacts to the address, the opposite
 operation should be called by the application to indicate the NACK and the length/data don't care. Each such transcation is to be started with a start condition
-and ended with a stop condition. This is currently the limitation that makes this too simplistic for real-life use, as no repeated start conditions are possible.
+and ended with a stop condition. This method supports no repeated start conditions.
 
-The intention is to relieve this limitation using an ioctl. If a userland i2c bus driver wants to support repeated start conditions, then it needs to use this ioctl
-that relays the in-kernel master-transfer call, allowing multiple collated i2c transactions with repeated start conditions.
+The new ioctl based protocol is very similar, only the first read of 2 bytes is replaced by an ioctl (UI2C_XFER) that returns the full 'i2c_msg' structure from i2c-dev userspace and in-kernel with the omission of the data pointer, as that is transfered with read or write.
+One i2c_msg is output every ioctl, the 'flags' bit I2C_M_STOP indicates to the consumer whether the stop condition needs to be generated at the end of this message, thus this determines if the following start condition is a repeated start or not.
+There is another ioctl (UI2C_SET_FUNC) that can be used to advertize the capabilities of the user-space i2c-bus, like support for 10 bit I2C addresses. Default functionalities are I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL.
 
 ## Compiling
 
@@ -54,6 +56,15 @@ Continue? [Y/n] y
 60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
 70: -- -- -- -- -- -- -- --                         
 ```
+
+Making the outputs change randomly:
+```
+i2ctransfer -y 5 w3@0x20 0 0 0
+while sleep 0.1; do i2ctransfer -y 5 w3@0x20 0x14 $(xxd -i -l2 </dev/urandom| tr -d ,); done
+
+```
+
+(NOTE - I saw that kernels <4.13 had a kernel mode [gpio-mcp23s08.ko](https://cateee.net/lkddb/web-lkddb/GPIO_MCP23S08.html) driver (supporting mcp23x08,09,16,17 and 18). My kernel is newer, so I haven't tried if this works with kernel i2c device drivers too (it /should/). Compiling the old kernel driver code with my kernel didn't work. Also it seems to only allow devicetree to configure it.)
 
 ## Connections
 
