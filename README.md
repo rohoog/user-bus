@@ -72,3 +72,6 @@ The ft232h requires 2 ports for the SDA line (ADBUS1 and ADBUS2) connected toget
 up with a resistor (4K7 suggested) to the VCC (5V or 3.3V depending on the connected device(s)). To me, that means that tf232h does not support "clock stretching",
 a method that slave devices can use to slow down the I2C bus speed if the bus master honors it.
 
+## Inspiration
+
+Some of my inspiration comes from http://christian.amsuess.com/idea-incubator/ftdi-kernel-support/
