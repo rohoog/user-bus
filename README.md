@@ -74,4 +74,4 @@ a method that slave devices can use to slow down the I2C bus speed if the bus ma
 
 ## Inspiration
 
-Some of my inspiration comes from http://christian.amsuess.com/idea-incubator/ftdi-kernel-support/
+Some of my inspiration comes from http://christian.amsuess.com/idea-incubator/ftdi-kernel-support/.
